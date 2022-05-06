@@ -4,7 +4,6 @@ env=gym.make('FrozenLake-v0')
 
 def compute_value_function(policy):
     num_iterations = 1000
-    threshold=1e-20
     gamma=1.0
     value_table = np.zeros(env.observation_space.n)
     for i in range(num_iterations):
@@ -13,9 +12,6 @@ def compute_value_function(policy):
             a = policy[s]
             value_table[s] = sum([prob * (r + gamma * updated_value_table[s_])
                                     for prob, s_, r, _ in env.P[s][a]])
-            if (np.sum(np.fabs(updated_value_table - value_table)) <=
-threshold):
-             break
     return value_table
 
 def extract_policy(value_table):
