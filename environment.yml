@@ -71,6 +71,7 @@ dependencies:
     - cffi==1.15.0
     - cloudpickle==1.2.2
     - cython==0.29.28
+    - dataclasses==0.8
     - future==0.18.2
     - glfw==2.5.3
     - gym==0.15.4
@@ -89,4 +90,6 @@ dependencies:
     - pytz==2022.1
     - pyvirtualdisplay==3.0
     - scipy==1.5.4
+    - torch==1.10.2
+    - typing-extensions==4.1.1
 prefix: /home/ubuntu/miniconda3/envs/learningRL
