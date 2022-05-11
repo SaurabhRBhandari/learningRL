@@ -5,7 +5,6 @@ from torch import nn
 import random
 import torch
 import gym
-from tqdm import tqdm
 
 env=gym.make('MsPacman-v0')
 
@@ -45,16 +44,14 @@ class CNN(torch.nn.Module):
 
     
 class DQN():
-    def __init__(self,buffer_size,gamma,epsilon,update_rate, device="cpu"):
+    def __init__(self,buffer_size,gamma,epsilon,update_rate):
 
         self.replay_buffer=deque(maxlen=buffer_size)
-        self.buffer_size = buffer_size
-        self.device = device
         self.gamma=gamma
         self.epsilon=epsilon
         self.update_rate=update_rate
-        self.main_network=self.build_network().to(self.device)
-        self.target_network=self.build_network().to(self.device)
+        self.main_network=self.build_network()
+        self.target_network=self.build_network()
         self.target_network=copy.deepcopy(self.main_network)
         self.loss_fn=nn.MSELoss()
         self.optimizer=torch.optim.Adam(self.main_network.parameters(),lr=1e-3)
@@ -70,31 +67,20 @@ class DQN():
         if random.uniform(0,1)<epsilon:
             return self.env.action_space.sample()
         else:
-            self.main_network.to(self.device)
-            B = state_to_tensor(state).to(self.device)
-            A = self.main_network(B)
-            Q_vals = A.detach().to("cpu").numpy()
+            Q_vals=self.main_network(state_to_tensor(state)).detach().numpy()
             return np.argmax(Q_vals)
     
     def fit(self,batch_size):
         minibatch = random.sample(self.replay_buffer, batch_size)
         self.main_network.train()
-        self.loss_fn = self.loss_fn.to(self.device)
         for state, action, reward, next_state, done in minibatch:
-            stat = state_to_tensor(state)
-            stat = stat.to(self.device)
-            next_stat = state_to_tensor(next_state)
-            next_stat = next_stat.to(self.device)
-            self.target_network.to(device=self.device)
-            self.main_network.to(device=self.device)
             if not done:
-                A=self.target_network(next_stat)
-                Q_ = A.detach().to(device="cpu").numpy()
+                Q_=self.target_network(state_to_tensor(next_state)).detach().numpy()
                 target_Q = reward + self.gamma*Q_
             else:
                 continue
     
-            Q_values=self.main_network(stat).to("cpu")
+            Q_values=self.main_network(state_to_tensor(state))
             
             loss=self.loss_fn(Q_values,torch.from_numpy(target_Q))
 
@@ -108,13 +94,13 @@ class DQN():
     def train(self):
         num_episodes=500
         num_timesteps=20000
-        batch_size=1024
+        batch_size=8
         done=False
-        for i in tqdm(range(num_episodes)):
+        for i in range(num_episodes):
             time_steps=0
             Return=0
             state=env.reset()
-            for t in tqdm(range(num_timesteps)):
+            for t in range(num_timesteps):
                 env.render()
                 time_steps +=1
                 if time_steps % self.update_rate ==0:
@@ -129,10 +115,9 @@ class DQN():
                     break
                 if(len(self.replay_buffer)>batch_size):
                     self.fit(batch_size)
-                    self.replay_buffer = deque([], maxlen=self.buffer_size)
             state=env.reset()
                 
-model=DQN(buffer_size=5000,gamma=0.9,epsilon=0.8,update_rate=1000, device="cuda")
+model=DQN(buffer_size=5000,gamma=0.9,epsilon=0.8,update_rate=1000)
 model.train()
         
         
