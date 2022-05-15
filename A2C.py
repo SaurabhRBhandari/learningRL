@@ -1,7 +1,8 @@
 import torch
-from torch import nn, unsqueeze
+from torch import nn
 import torch.nn.functional as F
 import gym
+
 env=gym.make('CartPole-v0')
 
 class NeuralNetwork(nn.Module):
@@ -20,7 +21,8 @@ class NeuralNetwork(nn.Module):
             return self.stack(x)
         else:
             return F.softmax(self.stack(x),dim=1)
-GAMMA=0.99
+
+GAMMA=0.9
 class Agent():
     def __init__(self, state_size, action_size, alpha=0.0001, beta=0.0005):
         self.action_size = action_size
@@ -38,10 +40,9 @@ class Agent():
     def act(self, state):
         
         probs = self.actor_net(state)
-        action_probs = torch.distributions.Categorical(probs)
-        action = action_probs.sample()
-        self.log_probs = action_probs.log_prob(action)
-        
+        m = torch.distributions.Categorical(probs)
+        action = m.sample()
+        self.log_probs=m.log_prob(action)
         return action.item()
         
     def step(self, state, reward, new_state, done):        
@@ -58,29 +59,31 @@ class Agent():
         actor_loss = -self.log_probs * delta
         critic_loss = delta**2
         
-        (actor_loss + critic_loss).backward()
+        actor_loss.backward(retain_graph=True)
+        critic_loss.backward()
         
         self.actor_optimizer.step()
         self.critic_optimizer.step()
 
 agent=Agent(env.observation_space.shape[0],env.action_space.n)
 
-num_iters=10000
-for i in range(num_iters):
-    state = env.reset()
-    score = 0
-    while True:
-        action = agent.act(state.copy())
-        next_state, reward, done, _ = env.step(action)
-        score+=reward
-        reward = -100 if done and score < 450 else reward
-        agent.step(state,reward,next_state,done)
-        if done:
-            break
-        if i%100==0:
-           env.render()
-    if i%1000==0:
-        print(f"Episode:{i},Score{score}")
+for i_episode in range(10000):
+        state = env.reset()
+        score = 0
+        while True:
+            action = agent.act(state.copy())
+            next_state, reward, done, _ = env.step(action)
+            score += reward
+            reward = -100 if done and score < 450 else reward  
+            agent.step(state, reward, next_state, done)
+            state = next_state
+            if i_episode%100==0:
+                env.render()
+            if done:
+                break
+            
+        if i_episode%1000==0:
+            print(score)
 
 env.close()
         
